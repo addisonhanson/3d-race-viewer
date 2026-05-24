@@ -31,7 +31,7 @@ npm run dev
 
 GPX files live in `public/stages/` named `stage-N-route.gpx`. Stage metadata (name, type) is in `src/lib/stages.ts`.
 
-GPX files for upcoming pro cycling races: [cyclingstage.com/gpx-2026-pro-cycling-races](https://www.cyclingstage.com/gpx-2026-pro-cycling-races/)
+GPX files sourced from [CyclingStage.com](https://www.cyclingstage.com/gpx-2026-pro-cycling-races/) — a great resource for pro cycling race routes.
 
 ## Stack
 
