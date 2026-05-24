@@ -22,23 +22,48 @@ function gradeToColor(grade: number): THREE.Color {
   return c
 }
 
-function computePointGrades(points: Vec3[]): number[] {
+function computeBlockColors(points: Vec3[]): THREE.Color[] {
   const n = points.length
-  const segGrades: number[] = []
+  const rawGrades: number[] = []
   for (let i = 0; i < n - 1; i++) {
     const p0 = points[i], p1 = points[i + 1]
     const horiz = Math.sqrt((p1.x - p0.x) ** 2 + (p1.z - p0.z) ** 2)
-    segGrades.push(horiz > 0 ? ((p1.y - p0.y) / horiz) * 100 : 0)
+    rawGrades.push(horiz > 0 ? ((p1.y - p0.y) / horiz) * 100 : 0)
   }
-  return points.map((_, i) => {
-    if (i === 0) return segGrades[0] ?? 0
-    if (i === n - 1) return segGrades[n - 2] ?? 0
-    return (segGrades[i - 1] + segGrades[i]) / 2
+
+  const hw = Math.min(40, Math.max(10, Math.floor(rawGrades.length * 0.015)))
+  const smoothed = rawGrades.map((_, i) => {
+    const lo = Math.max(0, i - hw), hi = Math.min(rawGrades.length - 1, i + hw)
+    let sum = 0
+    for (let j = lo; j <= hi; j++) sum += rawGrades[j]
+    return sum / (hi - lo + 1)
   })
+
+  // Group consecutive segments whose smoothed grade stays within threshold of block average
+  const GRADE_THRESHOLD = 2.0
+  const pointColors = new Array<THREE.Color>(n)
+  let bStart = 0, bSum = smoothed[0], bCount = 1
+
+  const flushBlock = (endPt: number) => {
+    const color = gradeToColor(bSum / bCount)
+    for (let i = bStart; i <= endPt; i++) pointColors[i] = color
+  }
+
+  for (let i = 1; i < smoothed.length; i++) {
+    if (Math.abs(smoothed[i] - bSum / bCount) > GRADE_THRESHOLD) {
+      flushBlock(i)
+      bStart = i; bSum = smoothed[i]; bCount = 1
+    } else {
+      bSum += smoothed[i]; bCount++
+    }
+  }
+  flushBlock(n - 1)
+
+  return pointColors
 }
 
 function buildGeometry(points: Vec3[], elevationScale: number) {
-  const grades = computePointGrades(points)
+  const colors = computeBlockColors(points)
   const n = points.length
 
   const linePos = new Float32Array(n * 3)
@@ -47,7 +72,7 @@ function buildGeometry(points: Vec3[], elevationScale: number) {
     linePos[i * 3] = p.x
     linePos[i * 3 + 1] = p.y * elevationScale
     linePos[i * 3 + 2] = p.z
-    const c = gradeToColor(grades[i])
+    const c = colors[i]
     lineCol[i * 3] = c.r; lineCol[i * 3 + 1] = c.g; lineCol[i * 3 + 2] = c.b
   })
   const lineGeom = new THREE.BufferGeometry()
@@ -58,7 +83,7 @@ function buildGeometry(points: Vec3[], elevationScale: number) {
   const curtainCol = new Float32Array(n * 2 * 3)
   for (let i = 0; i < n; i++) {
     const p = points[i], y = p.y * elevationScale
-    const c = gradeToColor(grades[i])
+    const c = colors[i]
     curtainPos[i * 6] = p.x;     curtainPos[i * 6 + 1] = y; curtainPos[i * 6 + 2] = p.z
     curtainPos[i * 6 + 3] = p.x; curtainPos[i * 6 + 4] = 0; curtainPos[i * 6 + 5] = p.z
     curtainCol[i * 6] = c.r;           curtainCol[i * 6 + 1] = c.g;           curtainCol[i * 6 + 2] = c.b

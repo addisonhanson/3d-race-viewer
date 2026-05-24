@@ -71,29 +71,45 @@ export function ElevationProfile({ points, currentKm, onSeek }: Props) {
         return sum / (hi - lo + 1)
       })
 
-      // Filled segments with grade colors
-      for (let i = 1; i < points.length; i++) {
-        const p0 = points[i - 1], p1 = points[i]
-        const x0 = toX(distances[i - 1]), x1 = toX(distances[i])
-        const y0 = toY(p0.y), y1 = toY(p1.y)
-        if (x1 - x0 < 0.3) continue
+      // Group segments into grade blocks — merge consecutive segments whose smoothed
+      // grade stays within THRESHOLD of the running block average.
+      const GRADE_THRESHOLD = 2.0
+      interface Block { startPt: number; endPt: number; grade: number }
+      const blocks: Block[] = []
+      let bStart = 0, bSum = smoothedGrades[0], bCount = 1
 
-        const color = gradeColor(smoothedGrades[i - 1])
+      for (let i = 1; i < smoothedGrades.length; i++) {
+        if (Math.abs(smoothedGrades[i] - bSum / bCount) > GRADE_THRESHOLD) {
+          blocks.push({ startPt: bStart, endPt: i, grade: bSum / bCount })
+          bStart = i; bSum = smoothedGrades[i]; bCount = 1
+        } else {
+          bSum += smoothedGrades[i]; bCount++
+        }
+      }
+      blocks.push({ startPt: bStart, endPt: points.length - 1, grade: bSum / bCount })
+
+      // Draw each block as a single filled polygon following actual elevation contour
+      for (const { startPt, endPt, grade } of blocks) {
+        const color = gradeColor(grade)
 
         ctx.beginPath()
-        ctx.moveTo(x0, H - PAD_B)
-        ctx.lineTo(x0, y0)
-        ctx.lineTo(x1, y1)
-        ctx.lineTo(x1, H - PAD_B)
+        ctx.moveTo(toX(distances[startPt]), H - PAD_B)
+        ctx.lineTo(toX(distances[startPt]), toY(points[startPt].y))
+        for (let i = startPt + 1; i <= endPt; i++) {
+          ctx.lineTo(toX(distances[i]), toY(points[i].y))
+        }
+        ctx.lineTo(toX(distances[endPt]), H - PAD_B)
         ctx.closePath()
-        ctx.globalAlpha = 0.28
+        ctx.globalAlpha = 0.35
         ctx.fillStyle = color
         ctx.fill()
         ctx.globalAlpha = 1
 
         ctx.beginPath()
-        ctx.moveTo(x0, y0)
-        ctx.lineTo(x1, y1)
+        ctx.moveTo(toX(distances[startPt]), toY(points[startPt].y))
+        for (let i = startPt + 1; i <= endPt; i++) {
+          ctx.lineTo(toX(distances[i]), toY(points[i].y))
+        }
         ctx.strokeStyle = color
         ctx.lineWidth = 1.5
         ctx.stroke()

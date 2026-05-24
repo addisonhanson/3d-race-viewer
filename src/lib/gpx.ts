@@ -1,4 +1,5 @@
 import GpxParser from 'gpxparser'
+import type { StageType } from './stages'
 
 export interface RoutePoint {
   lat: number
@@ -113,6 +114,15 @@ export function computeStats(points: RoutePoint[]): StageStats {
     maxElevationM,
     maxGradePct,
   }
+}
+
+export function classifyStage(points: RoutePoint[]): StageType {
+  const stats = computeStats(points)
+  if (stats.distanceKm < 60) return 'tt'
+  const gainPerKm = stats.elevationGainM / stats.distanceKm
+  if (gainPerKm > 22 || (stats.elevationGainM > 3500 && stats.maxElevationM > 1500)) return 'mountain'
+  if (gainPerKm > 11) return 'hilly'
+  return 'flat'
 }
 
 export function computeRouteDistancesKm(points: Vec3[]): number[] {
