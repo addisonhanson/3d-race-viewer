@@ -7,7 +7,7 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const STAGES_DIR = join(__dirname, '../public/stages')
+const STAGES_DIR = join(__dirname, '../public/stages/giro-2026')
 
 const EARTH_RADIUS_M = 6_371_000
 
