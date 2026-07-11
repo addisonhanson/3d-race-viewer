@@ -1,6 +1,8 @@
 # 3D Race Viewer
 
 Interactive 3D viewer for GPX cycling routes, built for the 2026 Giro d'Italia.
+<img width="1133" height="1408" alt="image" src="https://github.com/user-attachments/assets/d24fd870-7405-49f9-b82d-f8cc09190ec2" />
+<img width="1133" height="1408" alt="image" src="https://github.com/user-attachments/assets/b297d553-9d07-4545-8d8b-657cf626f797" />
 
 ## Features
 
